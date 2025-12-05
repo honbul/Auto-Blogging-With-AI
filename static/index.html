@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Link-to-Article Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=DM+Sans:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  </head>
+  <body>
+    <div class="page">
+      <header class="top-bar">
+        <div>
+          <p class="eyebrow">LLM blog builder</p>
+          <h1>Draft smarter blog posts from any link.</h1>
+          <p class="subhead">
+            Paste a URL, choose your model, and preview a Markdown draft with image prompts ready for your CMS.
+          </p>
+        </div>
+        <div class="badge">FastAPI · Custom UI</div>
+      </header>
+
+      <main class="layout">
+        <section class="panel input-panel">
+          <div class="field">
+            <label for="urls">Source links (one per line)</label>
+            <textarea id="urls" rows="3" placeholder="https://example.com/article-1\nhttps://example.com/article-2"></textarea>
+          </div>
+
+          <div class="field">
+            <label for="order">Your order</label>
+            <textarea
+              id="order"
+              rows="3"
+              placeholder="e.g., Focus on the business impact and add a one-line CTA at the end."
+              aria-label="Custom instructions to guide the article"
+            ></textarea>
+            <p class="hint">If left blank, default: “Blend insights from every source, balance strengths and gaps, keep it concise and publish-ready.”</p>
+          </div>
+
+          <div class="field inline">
+            <div>
+              <label for="model">Model</label>
+              <select id="model">
+                <option value="">Loading models…</option>
+              </select>
+            </div>
+            <button id="generate">Generate article</button>
+          </div>
+
+          <div id="status" class="status"></div>
+          <div id="progress" class="progress"></div>
+        </section>
+
+        <section class="panel preview-panel">
+          <div class="preview-head">
+            <div>
+              <p class="eyebrow">Markdown preview</p>
+              <h2 id="article-title">Waiting for a link…</h2>
+            </div>
+            <div class="pill" id="model-pill">model: —</div>
+          </div>
+          <div class="tabs">
+            <button class="tab active" data-tab="rendered">Rendered</button>
+            <button class="tab" data-tab="raw">Markdown</button>
+            <button class="ghost" id="copy-raw">Copy</button>
+          </div>
+          <div id="preview" class="preview view active"></div>
+          <textarea id="raw-markdown" class="preview raw" readonly></textarea>
+        </section>
+
+        <section class="panel advanced-panel">
+          <div class="preview-head">
+            <div>
+              <p class="eyebrow">LLM payload</p>
+              <h3>See and tweak what the model receives</h3>
+            </div>
+          </div>
+          <div class="field inline">
+            <div>
+              <label for="max-words">Max words</label>
+              <input id="max-words" type="number" min="120" max="1500" value="500" />
+            </div>
+            <button id="copy-prompt" class="ghost">Copy prompt</button>
+          </div>
+          <div class="sources" id="sources-list"></div>
+          <textarea id="prompt-preview" class="preview raw" readonly></textarea>
+        </section>
+
+        <section class="panel image-panel">
+          <div class="preview-head">
+            <div>
+              <p class="eyebrow">Image previews</p>
+              <h3>Top matches from web image search (enable outbound or set ENABLE_IMAGE_SEARCH=true)</h3>
+            </div>
+          </div>
+          <div id="images" class="images"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
