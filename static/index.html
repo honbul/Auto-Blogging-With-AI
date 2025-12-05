@@ -59,20 +59,24 @@
         </section>
 
         <section class="panel preview-panel">
-          <div class="preview-head">
-            <div>
-              <p class="eyebrow">Markdown preview</p>
-              <h2 id="article-title">Waiting for a link…</h2>
-            </div>
-            <div class="pill" id="model-pill">model: —</div>
+          <div class="panel-title">
+            <p class="eyebrow">Markdown</p>
           </div>
           <div class="tabs">
             <button class="tab active" data-tab="rendered">Rendered</button>
             <button class="tab" data-tab="raw">Markdown</button>
-            <button class="ghost" id="copy-raw">Copy</button>
+            <div class="tab-actions">
+              <button class="ghost" id="revert-raw">Revert</button>
+              <button class="ghost" id="copy-raw">Copy</button>
+            </div>
+          </div>
+          <div class="anchor-bar">
+            <span class="eyebrow">Anchor</span>
+            <span id="anchor-text" class="anchor-text">None. Click rendered text to set.</span>
+            <button class="ghost" id="clear-anchor">Clear</button>
           </div>
           <div id="preview" class="preview view active"></div>
-          <textarea id="raw-markdown" class="preview raw" readonly></textarea>
+          <textarea id="raw-markdown" class="preview raw"></textarea>
         </section>
 
         <section class="panel advanced-panel">
@@ -100,7 +104,32 @@
               <h3>Top matches from web image search (enable outbound or set ENABLE_IMAGE_SEARCH=true)</h3>
             </div>
           </div>
-          <div id="images" class="images"></div>
+          <div class="tabs image-tabs">
+            <button class="tab active" data-img-tab="search">Search results</button>
+            <button class="tab" data-img-tab="source">Source images</button>
+          </div>
+          <p class="hint">
+            Place your cursor in the Markdown editor or click text in the Rendered view to set an anchor, then click Insert.
+            You can also paste an image URL below.
+          </p>
+          <div class="field inline">
+            <div>
+              <label for="custom-image-url">Paste image URL</label>
+              <input id="custom-image-url" type="url" placeholder="https://example.com/image.jpg" />
+            </div>
+            <div>
+              <label for="image-width">Image width (px)</label>
+              <select id="image-width">
+                <option value="">Auto</option>
+                <option value="320">320</option>
+                <option value="480" selected>480</option>
+                <option value="640">640</option>
+              </select>
+            </div>
+            <button id="insert-custom-image" class="ghost">Insert</button>
+          </div>
+          <div id="images" class="images view active"></div>
+          <div id="source-images" class="images view"></div>
         </section>
       </main>
     </div>

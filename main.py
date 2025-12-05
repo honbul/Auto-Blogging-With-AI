@@ -6,10 +6,12 @@ from typing import List, Optional, Tuple
 
 import httpx
 from bs4 import BeautifulSoup
+from bs4.element import Tag
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, HttpUrl, field_validator
+from urllib.parse import urljoin
 
 # Models listed in the dropdown UI. Add your own identifiers here to route to a real LLM.
 SUPPORTED_MODELS = {"llama": "Llama 3", "gemma": "Gemma 2"}
@@ -56,6 +58,7 @@ class GenerateResponse(BaseModel):
     images: List[ImageResult]
     source_titles: List[str]
     source_urls: List[str]
+    source_images: List[List[str]]
     model: str
     prompt_preview: str
     source_summaries: List[str]
@@ -72,7 +75,7 @@ async def root() -> FileResponse:
 
 @app.post("/generate", response_model=GenerateResponse)
 async def generate_article(payload: GenerateRequest) -> GenerateResponse:
-    texts, titles = await fetch_all_texts([str(u) for u in payload.urls])
+    texts, titles, source_images = await fetch_all_data([str(u) for u in payload.urls])
     combined_text = "\n\n".join(texts)
     if not combined_text or len(combined_text.split()) < 25:
         raise HTTPException(status_code=400, detail="Source page did not contain enough readable text.")
@@ -110,6 +113,7 @@ async def generate_article(payload: GenerateRequest) -> GenerateResponse:
         model=payload.model,
         prompt_preview=prompt_preview,
         source_summaries=source_summaries,
+        source_images=source_images,
     )
 
 
@@ -126,7 +130,23 @@ async def list_models() -> List[str]:
         return list(SUPPORTED_MODELS.keys())
 
 
-async def fetch_page_text(url: str) -> Tuple[str, Optional[str]]:
+def extract_image_urls(soup: BeautifulSoup, base_url: str) -> List[str]:
+    urls: List[str] = []
+    for tag in soup.find_all("img"):
+        if not isinstance(tag, Tag):
+            continue
+        src = tag.get("src") or ""
+        if not src or src.startswith("data:"):
+            continue
+        full = urljoin(base_url, src)
+        if full.startswith(("http://", "https://")):
+            urls.append(full)
+        if len(urls) >= 8:
+            break
+    return urls
+
+
+async def fetch_page_text(url: str) -> Tuple[str, Optional[str], List[str]]:
     try:
         async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
             response = await client.get(url)
@@ -141,22 +161,26 @@ async def fetch_page_text(url: str) -> Tuple[str, Optional[str]]:
 
     text = soup.get_text(separator=" ", strip=True)
     text = re.sub(r"\s+", " ", text)
-    return text, source_title
+    image_urls = extract_image_urls(soup, url)
+    return text, source_title, image_urls
 
 
-async def fetch_all_texts(urls: List[str]) -> Tuple[List[str], List[str]]:
+async def fetch_all_data(urls: List[str]) -> Tuple[List[str], List[str], List[List[str]]]:
     fetched = await asyncio.gather(*[fetch_page_text(url) for url in urls], return_exceptions=True)
     texts: List[str] = []
     titles: List[str] = []
+    images: List[List[str]] = []
     for result in fetched:
         if isinstance(result, Exception):
             texts.append("")
             titles.append("")
+            images.append([])
             continue
-        text, title = result
+        text, title, img_urls = result
         texts.append(text or "")
         titles.append(title or "")
-    return texts, titles
+        images.append(img_urls or [])
+    return texts, titles, images
 
 
 def build_fallback_title(url: str) -> str:

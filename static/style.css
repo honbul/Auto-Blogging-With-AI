@@ -180,6 +180,12 @@ button:hover:not(:disabled) {
   margin: 10px 0 12px;
 }
 
+.tab-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
 .tab,
 .ghost {
   background: rgba(255, 255, 255, 0.08);
@@ -202,6 +208,10 @@ button:hover:not(:disabled) {
   margin-left: auto;
 }
 
+.ghost:active {
+  transform: translateY(0.5px);
+}
+
 .eyebrow {
   color: var(--muted);
   text-transform: uppercase;
@@ -216,6 +226,28 @@ button:hover:not(:disabled) {
   padding: 16px;
   min-height: 180px;
   border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.anchor-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 0 10px;
+}
+
+.anchor-text {
+  color: #dfe8ff;
+}
+
+.anchor-icon {
+  margin-left: 4px;
+  font-size: 12px;
+}
+
+.anchor-mark {
+  background: rgba(114, 168, 255, 0.35);
+  padding: 0 2px;
+  border-radius: 4px;
 }
 
 .preview.raw {
@@ -300,6 +332,21 @@ button:hover:not(:disabled) {
   text-decoration: none;
 }
 
+.image-card .mini {
+  margin-top: 6px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #e7f5ff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.image-card .mini:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
 .img-fallback {
   padding: 24px 12px;
   border-radius: 10px;
@@ -361,6 +408,24 @@ button:hover:not(:disabled) {
   100% {
     opacity: 0.4;
   }
+}
+
+.images.view {
+  display: none;
+}
+
+.images.view.active {
+  display: grid;
+}
+
+.inserted-image {
+  margin: 16px 0;
+  text-align: center;
+}
+
+.inserted-image img {
+  max-width: 100%;
+  height: auto;
 }
 
 h2,
