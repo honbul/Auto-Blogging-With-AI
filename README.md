@@ -12,7 +12,7 @@ Generate publish-ready Markdown articles from one or more URLs using a local Oll
 
 ## How it works
 1. Fetch & clean each URL (strip scripts/styles, normalize text).
-2. Per-source summaries: one Ollama call per link to condense content.
+2. Per-source summaries: one Ollama call per link to condense content (falls back to heuristic if needed).
 3. Build prompt: user/default order + per-source summaries + constraints.
 4. Final article: single Ollama call to generate Markdown; references appended.
 5. Image search (optional): DuckDuckGo thumbnails; placeholder when disabled.

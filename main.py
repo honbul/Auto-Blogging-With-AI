@@ -148,12 +148,13 @@ async def fetch_all_texts(urls: List[str]) -> Tuple[List[str], List[str]]:
     fetched = await asyncio.gather(*[fetch_page_text(url) for url in urls], return_exceptions=True)
     texts: List[str] = []
     titles: List[str] = []
-    for item in fetched:
-        if isinstance(item, Exception):
+    for result in fetched:
+        if isinstance(result, Exception):
+            texts.append("")
+            titles.append("")
             continue
-        text, title = item
-        if text:
-            texts.append(text)
+        text, title = result
+        texts.append(text or "")
         titles.append(title or "")
     return texts, titles
 
