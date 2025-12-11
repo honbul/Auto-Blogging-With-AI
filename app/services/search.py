@@ -6,7 +6,7 @@ from urllib.parse import quote_plus
 import httpx
 from ..models import ImageResult
 
-ENABLE_IMAGE_SEARCH = os.getenv("ENABLE_IMAGE_SEARCH", "false").lower() == "true"
+ENABLE_IMAGE_SEARCH = os.getenv("ENABLE_IMAGE_SEARCH", "true").lower() == "true"
 
 async def get_vqd(client: httpx.AsyncClient, query: str) -> str:
     try:
