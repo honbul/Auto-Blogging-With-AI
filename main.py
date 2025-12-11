@@ -75,7 +75,7 @@ async def root() -> FileResponse:
 
 @app.post("/generate", response_model=GenerateResponse)
 async def generate_article(payload: GenerateRequest) -> GenerateResponse:
-    texts, titles, source_images = await fetch_all_data([str(u) for u in payload.urls])
+    texts, titles, source_images, final_urls = await fetch_all_data([str(u) for u in payload.urls])
     combined_text = "\n\n".join(texts)
     if not combined_text or len(combined_text.split()) < 25:
         raise HTTPException(status_code=400, detail="Source page did not contain enough readable text.")
@@ -83,12 +83,12 @@ async def generate_article(payload: GenerateRequest) -> GenerateResponse:
     source_titles = [
         (payload.source_labels[i] if payload.source_labels and i < len(payload.source_labels) else None)
         or titles[i]
-        or build_fallback_title(str(payload.urls[i]))
+        or build_fallback_title(final_urls[i])
         for i in range(len(payload.urls))
     ]
 
     main_title = source_titles[0]
-    source_urls = [str(u) for u in payload.urls]
+    source_urls = final_urls
     source_summaries = await summarize_sources_with_ollama(
         payload.model, source_titles, source_urls, texts, payload.max_words
     )
@@ -101,6 +101,7 @@ async def generate_article(payload: GenerateRequest) -> GenerateResponse:
         source_urls,
         payload.max_words,
         source_summaries,
+        source_images,
     )
     article_markdown = append_references(article_markdown, source_titles, source_urls)
     images = await build_image_results(main_title, combined_text)
@@ -132,21 +133,45 @@ async def list_models() -> List[str]:
 
 def extract_image_urls(soup: BeautifulSoup, base_url: str) -> List[str]:
     urls: List[str] = []
-    for tag in soup.find_all("img"):
+    # prioritization: look for article images first
+    candidates = soup.find_all("img")
+    
+    ignore_terms = {"icon", "logo", "avatar", "button", "share", "social", "tracker", "pixel"}
+    
+    for tag in candidates:
         if not isinstance(tag, Tag):
             continue
+            
+        # Basic attribute filtering
         src = tag.get("src") or ""
+        alt = (tag.get("alt") or "").lower()
+        cls = " ".join(tag.get("class") or []).lower()
+        
         if not src or src.startswith("data:"):
             continue
+            
+        # Filter by size if attributes exist (heuristic)
+        width = tag.get("width")
+        height = tag.get("height")
+        if width and width.isdigit() and int(width) < 150:
+            continue
+        if height and height.isdigit() and int(height) < 150:
+            continue
+            
+        # Filter by keywords
+        combined_attrs = (src + " " + alt + " " + cls).lower()
+        if any(term in combined_attrs for term in ignore_terms):
+            continue
+
         full = urljoin(base_url, src)
         if full.startswith(("http://", "https://")):
             urls.append(full)
-        if len(urls) >= 8:
+        if len(urls) >= 12:
             break
     return urls
 
 
-async def fetch_page_text(url: str) -> Tuple[str, Optional[str], List[str]]:
+async def fetch_page_text(url: str) -> Tuple[str, Optional[str], List[str], str]:
     try:
         async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
             response = await client.get(url)
@@ -156,31 +181,42 @@ async def fetch_page_text(url: str) -> Tuple[str, Optional[str], List[str]]:
 
     soup = BeautifulSoup(response.text, "html.parser")
     source_title = soup.title.string.strip() if soup.title and soup.title.string else None
+    
+    # Check for canonical URL
+    canonical_tag = soup.find("link", rel="canonical")
+    canonical_url = canonical_tag.get("href") if canonical_tag else url
+    if not canonical_url or not canonical_url.startswith(("http://", "https://")):
+        canonical_url = url
+        
     for tag in soup(["script", "style", "noscript"]):
         tag.extract()
 
     text = soup.get_text(separator=" ", strip=True)
     text = re.sub(r"\s+", " ", text)
     image_urls = extract_image_urls(soup, url)
-    return text, source_title, image_urls
+    return text, source_title, image_urls, canonical_url
 
 
-async def fetch_all_data(urls: List[str]) -> Tuple[List[str], List[str], List[List[str]]]:
+async def fetch_all_data(urls: List[str]) -> Tuple[List[str], List[str], List[List[str]], List[str]]:
     fetched = await asyncio.gather(*[fetch_page_text(url) for url in urls], return_exceptions=True)
     texts: List[str] = []
     titles: List[str] = []
     images: List[List[str]] = []
-    for result in fetched:
+    final_urls: List[str] = []
+    
+    for i, result in enumerate(fetched):
         if isinstance(result, Exception):
             texts.append("")
             titles.append("")
             images.append([])
+            final_urls.append(urls[i])
             continue
-        text, title, img_urls = result
+        text, title, img_urls, canon_url = result
         texts.append(text or "")
         titles.append(title or "")
         images.append(img_urls or [])
-    return texts, titles, images
+        final_urls.append(canon_url or urls[i])
+    return texts, titles, images, final_urls
 
 
 def build_fallback_title(url: str) -> str:
@@ -337,12 +373,32 @@ def build_prompt(
     source_urls: List[str],
     max_words: int,
     source_summaries: List[str],
+    source_images: List[List[str]],
 ) -> str:
     user_order = instructions.strip() if instructions else DEFAULT_ORDER
     summaries_block = "\n".join(
         f"- {source_titles[i] or 'Untitled'} ({source_urls[i]}) :: {src_sum}"
         for i, src_sum in enumerate(source_summaries)
     )
+    
+    # Flatten images with indices for the LLM
+    image_block_lines = []
+    img_idx = 1
+    for i, images in enumerate(source_images):
+        src_title = source_titles[i] or f"Source {i+1}"
+        for img_url in images:
+            image_block_lines.append(f"[{img_idx}] {img_url} (from {src_title})")
+            img_idx += 1
+    
+    image_instruction = ""
+    if image_block_lines:
+        image_instruction = (
+            "\nAvailable Images (you MUST use at least 2 relevant images if they fit the context):\n"
+            + "\n".join(image_block_lines)
+            + "\n\nInstruction for images: Insert images using Markdown syntax `![Alt Text](URL)`. "
+            "Only use URLs from the list above. Choose images that match the section context."
+        )
+
     return f"""
 You are an expert blog editor. Write a Markdown article that is clean and ready to paste into a CMS.
 Follow the user's order exactly.
@@ -350,6 +406,7 @@ Follow the user's order exactly.
 User order: {user_order}
 Per-source summaries:
 {summaries_block}
+{image_instruction}
 
 Requirements:
 - Include sections: # Title, ## TL;DR, ## Highlights (bullets), ## Analysis, ## What to watch.
@@ -357,6 +414,7 @@ Requirements:
 - Keep length under {max_words} words unless the order says otherwise.
 - Do not hallucinate facts beyond the source summary.
 - Use every per-source summary above—do not focus only on the first link. If sources conflict, call it out.
+- Embed relevant images from the "Available Images" list directly into the markdown flow.
 """
 
 
@@ -369,8 +427,11 @@ async def synthesize_with_ollama(
     source_urls: List[str],
     max_words: int,
     source_summaries: List[str],
+    source_images: List[List[str]],
 ) -> Tuple[str, str]:
-    prompt = build_prompt(title, source_text, instructions, source_titles, source_urls, max_words, source_summaries)
+    prompt = build_prompt(
+        title, source_text, instructions, source_titles, source_urls, max_words, source_summaries, source_images
+    )
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             resp = await client.post(
