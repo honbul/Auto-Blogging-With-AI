@@ -16,6 +16,7 @@ const anchorText = document.getElementById("anchor-text");
 const clearAnchorBtn = document.getElementById("clear-anchor");
 const promptPreview = document.getElementById("prompt-preview");
 const copyPromptBtn = document.getElementById("copy-prompt");
+const regenerateWithPromptBtn = document.getElementById("regenerate-with-prompt");
 const sourcesList = document.getElementById("sources-list");
 const maxWordsInput = document.getElementById("max-words");
 const imageTabs = document.querySelectorAll(".image-tabs .tab");
@@ -214,10 +215,10 @@ const insertImageMarkdown = (title, url) => {
   applyAnchorHighlight();
 };
 
-const generate = async () => {
+const generate = async (usePromptPreview = false) => {
   const urls = parseUrls(urlsInput.value);
   const model = modelSelect.value;
-  const instructions = orderInput.value.trim() || defaultOrder;
+  const instructions = usePromptPreview ? promptPreview.value.trim() : orderInput.value.trim() || defaultOrder;
   const sourceLabels = [];
   const max_words = Number(maxWordsInput.value) || 2000;
   if (!urls.length) {
@@ -351,6 +352,8 @@ urlsInput.addEventListener("keydown", (e) => {
     generate();
   }
 });
+
+regenerateWithPromptBtn.addEventListener("click", () => generate(true));
 
 rawView.addEventListener("input", renderPreviewFromRaw);
 
