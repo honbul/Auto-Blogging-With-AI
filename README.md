@@ -7,7 +7,7 @@ Generate publish-ready Markdown articles from one or more URLs using a local Oll
 - User order/instructions with a sensible default if left blank.
 - Rendered + raw Markdown tabs with live editing, copy, and revert.
 - Insert images directly into Markdown from search results or original sources.
-- Advanced panel shows the exact prompt, source list, and lets you set max words.
+- Advanced panel shows the exact prompt, source list, and lets you set max words (default 2000, up to 4000).
 - Image previews via DuckDuckGo (optional; toggle by env var).
 - References section appended with all source links.
 

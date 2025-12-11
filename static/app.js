@@ -219,7 +219,7 @@ const generate = async () => {
   const model = modelSelect.value;
   const instructions = orderInput.value.trim() || defaultOrder;
   const sourceLabels = [];
-  const max_words = Number(maxWordsInput.value) || 500;
+  const max_words = Number(maxWordsInput.value) || 2000;
   if (!urls.length) {
     setStatus("Please paste at least one valid URL.", true);
     return;

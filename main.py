@@ -24,7 +24,7 @@ class GenerateRequest(BaseModel):
     urls: List[HttpUrl]
     model: str
     instructions: Optional[str] = None
-    max_words: int = 500
+    max_words: int = 2000
     source_labels: Optional[List[str]] = None
 
     @field_validator("model")
@@ -44,7 +44,7 @@ class GenerateRequest(BaseModel):
     @field_validator("max_words")
     @classmethod
     def validate_max_words(cls, value: int) -> int:
-        return max(120, min(1500, value))
+        return max(200, min(4000, value))
 
 
 class ImageResult(BaseModel):
