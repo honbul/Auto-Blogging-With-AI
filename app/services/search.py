@@ -11,8 +11,8 @@ ENABLE_IMAGE_SEARCH = os.getenv("ENABLE_IMAGE_SEARCH", "false").lower() == "true
 async def get_vqd(client: httpx.AsyncClient, query: str) -> str:
     try:
         resp = await client.get(f"https://duckduckgo.com/?q={query}&t=h_&iax=images&ia=images")
-        # Extract vqd='...' or vqd='...'
-        match = re.search(r"vqd=['"]?([^&"']+)['"]?", resp.text)
+        # Extract vqd='...' or vqd="..."
+        match = re.search(r'vqd=[\'"]?([^&"\']+)[\'"]?', resp.text)
         return match.group(1) if match else ""
     except Exception:
         return ""
